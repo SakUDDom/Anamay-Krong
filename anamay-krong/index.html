@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anamay Krong - ប្រព័ន្ធគ្រប់គ្រងអនាម័យ</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="apple-touch-icon" href="logo/logo.JPEG">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+  
+  <style>
+    body, html { height: 100%; margin: 0; overflow: hidden; background-color: #f8fafc; }
+    #map { height: 100%; width: 100%; z-index: 0; }
+    
+    /* 🚀 មន្តអាគមរុញ Tools គូសផែនទីឱ្យចុះក្រោម កុំឱ្យត្រួតស៊ីញ៉េជាមួយ Search Bar */
+    .leaflet-top.leaflet-left {
+        margin-top: 130px;
+        margin-left: 5px;
+    }
+  </style>
+</head>
+<body class="font-sans text-slate-800 h-screen flex flex-col">
+
+  <!-- ផ្ទាំង Login -->
+  <div id="login-page" class="absolute inset-0 z-[3000] flex items-center justify-center bg-indigo-900">
+    <div class="w-full max-w-md bg-white rounded-xl shadow-2xl p-8 m-4">
+      <div class="text-center mb-6">
+        <img src="logo/logo.JPEG" alt="Anamay Krong Logo" onerror="this.style.display='none'" class="w-24 h-24 mx-auto mb-4 object-contain rounded-full shadow-md border-2 border-indigo-100">
+        <h1 class="text-2xl font-bold text-slate-800">ចូលប្រើប្រព័ន្ធ</h1>
+      </div>
+      <form id="login-form" class="space-y-4">
+        <input type="email" id="login-email" required placeholder="Email" class="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+        <input type="password" id="login-password" required placeholder="Password" class="w-full px-4 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+        <button type="submit" id="login-btn" class="w-full bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700 transition-colors">ចូល</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ផ្ទាំងកម្មវិធី (Main App) -->
+  <div id="main-app" class="hidden h-full flex flex-col w-full relative">
+    
+    <!-- Header -->
+    <header class="bg-white shadow-sm z-20 px-4 py-3 flex justify-between items-center border-b border-slate-200">
+      <div class="flex items-center gap-3">
+        <img src="logo/logo.JPEG" alt="Logo" onerror="this.style.display='none'" class="w-8 h-8 object-contain rounded-md">
+        <h1 class="text-xl font-bold text-indigo-700">Anamay Krong</h1>
+        <span id="user-role-badge" class="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded-full font-bold border">...</span>
+      </div>
+      <div class="flex gap-2">
+        <button id="nav-map" class="px-4 py-2 text-sm font-bold bg-indigo-100 text-indigo-700 rounded-lg"><i class="fa-solid fa-map-location-dot mr-1"></i> ផែនទី</button>
+        <button id="nav-report" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-lg"><i class="fa-solid fa-chart-pie mr-1"></i> របាយការណ៍</button>
+        <button id="logout-btn" class="px-4 py-2 text-sm font-bold text-rose-600 border border-rose-200 hover:bg-rose-50 rounded-lg"><i class="fa-solid fa-sign-out-alt"></i></button>
+      </div>
+    </header>
+
+    <div class="flex-1 relative flex overflow-hidden">
+        
+      <!-- ផ្ទាំង ផែនទី -->
+      <div id="view-map" class="flex-1 relative h-full block">
+        
+        <!-- Search & Filter Bar (ត្រឡប់មកឆ្វេងលើវិញយ៉ាងស្អាត) -->
+        <div class="absolute top-4 left-4 z-[1000] flex flex-col gap-2 w-80">
+          <div id="admin-map-tools" class="hidden flex gap-2">
+            <select id="map-zone-filter" class="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-indigo-700 shadow-md outline-none">
+                <option value="">🗺️ គ្រប់តំបន់ទាំងអស់</option>
+            </select>
+            <button id="toggle-color-btn" class="bg-white text-indigo-600 px-3 py-2 rounded-lg shadow-md border border-slate-200 hover:bg-indigo-50 transition-colors" title="ប្តូរពណ៌ចំណុច">
+                <i class="fa-solid fa-palette text-lg"></i>
+            </button>
+          </div>
+
+          <div class="flex gap-2">
+            <div class="flex flex-1 bg-white p-1 rounded-lg shadow-md border border-slate-200">
+                <input type="text" id="map-search-input" placeholder="ស្វែងរកលេខកូដ (KPC...)" class="flex-1 outline-none px-2 text-sm font-medium">
+                <button id="map-search-btn" class="bg-indigo-600 text-white px-3 py-1.5 rounded hover:bg-indigo-700"><i class="fa-solid fa-search"></i></button>
+            </div>
+            <div class="relative">
+              <button id="point-dropdown-btn" class="bg-white text-slate-700 px-4 py-2.5 rounded-lg shadow-md border border-slate-200 hover:bg-slate-50"><i class="fa-solid fa-layer-group"></i></button>
+              <div id="point-dropdown-menu" class="hidden absolute left-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-100 overflow-hidden">
+                <button id="mode-add-btn" class="w-full text-left px-4 py-3 text-sm text-emerald-600 hover:bg-slate-50 font-bold border-b"><i class="fa-solid fa-plus mr-2"></i> បន្ថែមចំណុច</button>
+                <button id="mode-delete-btn" class="w-full text-left px-4 py-3 text-sm text-rose-600 hover:bg-slate-50 font-bold"><i class="fa-solid fa-trash mr-2"></i> លុបចំណុច</button>
+              </div>
+            </div>
+          </div>
+          <div id="mode-badge" class="hidden bg-white p-2 rounded-lg shadow-md text-center text-xs font-bold border border-slate-200"></div>
+        </div>
+        
+        <div id="map"></div>
+      </div>
+
+      <!-- ផ្ទាំង Side Panel -->
+      <div id="side-panel" class="hidden w-[400px] bg-white shadow-[-5px_0_15px_rgba(0,0,0,0.05)] border-l border-slate-200 z-[2000] flex-col h-full absolute right-0 top-0 md:relative">
+          <div class="p-4 flex justify-between items-center border-b border-slate-100 bg-indigo-50/50">
+              <h3 class="font-bold text-indigo-700 flex items-center"><i class="fa-solid fa-user-tag mr-2"></i>ព័ត៌មានអតិថិជន</h3>
+              <button onclick="closeSidePanel()" class="text-slate-400 hover:text-rose-500"><i class="fa-solid fa-times text-xl"></i></button>
+          </div>
+          <div id="panel-content" class="p-6 space-y-4 overflow-y-auto flex-1 pb-20">
+          </div>
+      </div>
+
+      <!-- ផ្ទាំង របាយការណ៍ -->
+      <div id="view-report" class="hidden flex-1 w-full h-full overflow-y-auto bg-slate-50 p-6 lg:p-10 relative z-10">
+        <div class="max-w-6xl mx-auto space-y-6">
+            
+          <div class="flex flex-col md:flex-row justify-between items-end gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <div>
+              <h2 class="text-2xl font-bold text-slate-800">របាយការណ៍ទូទៅ</h2>
+              <p class="text-sm text-slate-500 mt-1">ទិន្នន័យស្ថិតិ និងការគ្រប់គ្រង</p>
+            </div>
+            
+            <div class="flex gap-2 flex-wrap items-center">
+              <select id="global-zone-select" class="hidden px-4 py-2 border rounded-lg text-sm bg-indigo-50 font-bold text-indigo-700 outline-none shadow-sm border-indigo-200">
+                <option value="">🗺️ គ្រប់តំបន់ទាំងអស់</option>
+              </select>
+              <select id="global-month-select" class="hidden px-4 py-2 border rounded-lg text-sm bg-slate-50 font-bold text-slate-700 outline-none">
+                <option value="">⚙️ ប្តូរខែរួម</option>
+                <option value="ខែមករា">ខែមករា</option><option value="ខែកកុម្ភៈ">ខែកកុម្ភៈ</option>
+                <option value="ខែមីនា">ខែមីនា</option><option value="ខែមេសា">ខែមេសា</option>
+                <option value="ខែឧសភា">ខែឧសភា</option><option value="ខែមិថុនា">ខែមិថុនា</option>
+                <option value="ខែកក្កដា">ខែកក្កដា</option><option value="ខែសីហា">ខែសីហា</option>
+                <option value="ខែកញ្ញា">ខែកញ្ញា</option><option value="ខែតុលា">ខែតុលា</option>
+                <option value="ខែវិច្ឆិកា">ខែវិច្ឆិកា</option><option value="ខែធ្នូ">ខែធ្នូ</option>
+              </select>
+              <select id="global-status-select" class="hidden px-4 py-2 border rounded-lg text-sm bg-slate-50 font-bold text-slate-700 outline-none">
+                <option value="">⚙️ ប្តូរស្ថានភាពរួម</option>
+                <option value="blue">🔵 បានបង់</option>
+                <option value="yellow">🟡 មិនទាន់បង់</option>
+                <option value="red">🔴 បិទ</option>
+                <option value="black">⚫ បង់តែទុកសិន</option>
+              </select>
+              <button id="export-csv-btn" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-emerald-100 shadow-sm">
+                <i class="fa-solid fa-download mr-1"></i> ទាញយក CSV
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                <div class="flex justify-between items-start mb-2"><span class="text-sm font-bold text-slate-500">ផ្ទះសរុប</span><div class="p-2 bg-indigo-50 rounded-lg text-indigo-500"><i class="fa-solid fa-house"></i></div></div>
+                <div id="stat-total" class="text-3xl font-black text-slate-800">0</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                <div class="flex justify-between items-start mb-2"><span class="text-sm font-bold text-slate-500">បានបង់</span><div class="p-2 bg-emerald-50 rounded-lg text-emerald-500"><i class="fa-solid fa-check-circle"></i></div></div>
+                <div id="stat-paid" class="text-3xl font-black text-emerald-600">0</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                <div class="flex justify-between items-start mb-2"><span class="text-sm font-bold text-slate-500">រង់ចាំបង់</span><div class="p-2 bg-amber-50 rounded-lg text-amber-500"><i class="fa-solid fa-clock"></i></div></div>
+                <div id="stat-pending" class="text-3xl font-black text-amber-500">0</div>
+            </div>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+                <div class="flex justify-between items-start mb-2"><span class="text-sm font-bold text-slate-500">បិទ</span><div class="p-2 bg-rose-50 rounded-lg text-rose-500"><i class="fa-solid fa-times-circle"></i></div></div>
+                <div id="stat-closed" class="text-3xl font-black text-rose-600">0</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+              <div class="flex justify-between items-center mb-4">
+                  <h3 class="font-bold text-slate-800">ចំណូលប្រចាំខែនេះ</h3>
+                  <div class="p-2 bg-emerald-50 rounded-lg text-emerald-500"><i class="fa-solid fa-wallet"></i></div>
+              </div>
+              <div id="stat-revenue" class="text-4xl font-black text-emerald-600">0 ៛</div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-indigo-500">
+              <div class="flex justify-between items-center mb-4">
+                  <h3 class="font-bold text-slate-800">ចំណូលប្រចាំថ្ងៃនេះ (Today)</h3>
+                  <div class="p-2 bg-indigo-50 rounded-lg text-indigo-500"><i class="fa-solid fa-calendar-day"></i></div>
+              </div>
+              <div id="stat-daily-revenue" class="text-4xl font-black text-indigo-600">0 ៛</div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 class="font-bold text-slate-800"><i class="fa-solid fa-list mr-2 text-indigo-500"></i>បញ្ជីឈ្មោះអតិថិជន</h3>
+              <div class="flex items-center gap-2">
+                  <span class="text-xs text-slate-500 font-bold">បង្ហាញ៖</span>
+                  <select id="items-per-page" class="border px-2 py-1 rounded text-sm outline-none font-bold text-indigo-700 bg-white shadow-sm">
+                      <option value="10">10 ជួរ</option>
+                      <option value="50">50 ជួរ</option>
+                      <option value="100">100 ជួរ</option>
+                  </select>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left text-slate-600">
+                <thead class="bg-slate-100/50 text-slate-500 font-bold border-b">
+                  <tr><th class="px-6 py-4">លេខកូដ</th><th class="px-6 py-4">ឈ្មោះ</th><th class="px-6 py-4">តំបន់</th><th class="px-6 py-4">ខែត្រូវបង់</th><th class="px-6 py-4">ស្ថានភាព</th></tr>
+                </thead>
+                <tbody id="report-table-body" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-100 flex justify-between items-center bg-slate-50">
+                <span id="page-info" class="text-xs text-slate-500 font-bold">កំពុងបង្ហាញ 0 - 0 នៃ 0</span>
+                <div class="flex gap-2">
+                    <button id="prev-page-btn" class="px-3 py-1 bg-white border rounded text-slate-600 hover:bg-slate-100 disabled:opacity-50 text-sm font-bold"><i class="fa-solid fa-chevron-left mr-1"></i> ថយក្រោយ</button>
+                    <button id="next-page-btn" class="px-3 py-1 bg-white border rounded text-slate-600 hover:bg-slate-100 disabled:opacity-50 text-sm font-bold">ទៅមុខ <i class="fa-solid fa-chevron-right ml-1"></i></button>
+                </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ផ្ទាំង History Modal -->
+  <div id="history-modal" class="hidden absolute inset-0 z-[4000] bg-black/60 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md h-[80%] max-h-[600px] flex flex-col overflow-hidden transform transition-all">
+      <div class="p-4 border-b border-slate-100 bg-indigo-50 flex justify-between items-center">
+          <h3 class="font-bold text-indigo-800 text-lg flex items-center"><i class="fa-solid fa-clock-rotate-left mr-2 text-indigo-600"></i>ប្រវត្តិបង់ប្រាក់</h3>
+          <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-rose-500 bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm border border-slate-200"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <div id="history-content" class="p-4 overflow-y-auto flex-1 space-y-3 bg-slate-50">
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
+  
+  <script src="script.js?v=52"></script>
+  
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
+      });
+    }
+  </script>
+</body>
+</html>

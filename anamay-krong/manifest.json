@@ -1,0 +1,23 @@
+{
+  "name": "Anamay Krong",
+  "short_name": "Anamay",
+  "description": "ប្រព័ន្ធគ្រប់គ្រងអនាម័យក្រុង",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "./logo/logo.JPEG",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./logo/logo.JPEG",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
