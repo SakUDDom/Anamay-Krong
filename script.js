@@ -13,7 +13,7 @@ let currentUserRole = 'user';
 let currentUserZone = ''; 
 let currentPage = 1;
 let itemsPerPage = 10;
-let currentSelectedFile = null; // 🚀 រក្សាទុករូបដែលចង់ Upload ថ្មី
+let currentSelectedFile = null;
 
 let isZoneColorMode = false;
 let currentMapZoneFilter = '';
@@ -260,21 +260,16 @@ function initLeafletMap() {
 
 async function fetchAndRenderData() {
     try {
-        // 🚀 អាអូនដកពាក្យ 'name' ចេញ ហើយទុកតែ Column ដែលមានពិតប្រាកដ
         const { data: households, error: hError } = await supabaseClient.from('households')
             .select('id, custom_id, customer_name, lat, lng, zone, status_color, monthly_fee, payment_month, photo_url');
         
-        // បើមាន Error ទាក់ទងនឹង Column វាលោតប្រាប់លើអេក្រង់ភ្លាម!
         if (hError) {
-            alert("⚠️ កំហុស Supabase: " + hError.message + "\n(សូមឆែកមើលថាមាន Column 'photo_url' ក្នុង Database ឬនៅ?)");
-            console.error("Supabase Households Error:", hError);
-            return; // បញ្ឈប់ការរត់កូដ
+            alert("⚠️ កំហុស Supabase: " + hError.message); return;
         }
 
         const { data: borders, error: bError } = await supabaseClient.from('zone_borders').select('*'); 
         zoneBordersData = borders || [];
 
-        // ផ្ទៀងផ្ទាត់សិទ្ធិ Zone
         if (currentUserRole === 'super admin') {
             localHouseholdsData = households || [];
             populateZoneDropdown(); 
@@ -288,9 +283,7 @@ async function fetchAndRenderData() {
         
         renderMapMarkers();
         if(document.getElementById('view-report').style.display === 'block') calculateReports();
-    } catch (error) { 
-        console.error("កំហុសទូទៅក្នុងការទាញទិន្នន័យ:", error); 
-    }
+    } catch (error) { console.error("កំហុសទូទៅក្នុងការទាញទិន្នន័យ:", error); }
 }
 
 function populateZoneDropdown() {
@@ -397,7 +390,7 @@ function renderMapMarkers() {
 window.closeSidePanel = () => { 
     const p = document.getElementById('side-panel'); 
     p.classList.add('hidden'); p.classList.remove('flex'); 
-    currentSelectedFile = null; // Reset ពេលបិទផ្ទាំង
+    currentSelectedFile = null; 
 }
 
 function showSidePanel(h) {
@@ -405,6 +398,9 @@ function showSidePanel(h) {
     let nextUnpaidMonthIndex = months.indexOf(h.payment_month);
     let nextUnpaidMonthHtml = (nextUnpaidMonthIndex === -1) ? 'គ្មានព័ត៌មាន' : months[nextUnpaidMonthIndex];
     let mOpts = months.map(m => `<option value="${m}" ${h.payment_month === m ? 'selected' : ''}>${m}</option>`).join('');
+    
+    // 🚀 ថ្មី៖ Options សម្រាប់ជ្រើសរើសខែក្នុងប្រអប់ Quick Pay
+    let mOptsQuickPay = months.map(m => `<option value="${m}" ${h.payment_month === m ? 'selected' : ''}>បង់ចាប់ពី៖ ${m}</option>`).join('');
     
     let currentStatusHtml = '';
     if (h.status_color === 'blue') {
@@ -415,7 +411,19 @@ function showSidePanel(h) {
 
     let quickPayBtnHtml = '';
     if (h.status_color !== 'blue') {
-        quickPayBtnHtml = `<div class="mt-4 p-4 rounded-xl border border-indigo-100 bg-white shadow-sm"><label class="block text-sm font-bold text-slate-700 mb-2">ចុចបង់ប្រាក់រហ័ស៖</label><div class="flex items-center gap-3"><input type="number" id="pay-num-months" value="1" min="1" max="12" class="w-20 border px-3 py-2.5 rounded-lg font-bold text-lg text-center outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 bg-white shadow-inner"><button onclick="quickPay('${h.id}')" id="quick-pay-btn" class="flex-1 bg-amber-500 text-white font-bold py-3 rounded-lg hover:bg-amber-600 transition-colors shadow-md flex justify-center items-center gap-2 text-base"><i class="fa-solid fa-hand-holding-dollar"></i> បង់ប្រាក់</button></div></div>`;
+        quickPayBtnHtml = `
+        <div class="mt-4 p-4 rounded-xl border border-indigo-100 bg-indigo-50 shadow-sm">
+            <label class="block text-sm font-bold text-indigo-700 mb-2">បង់ប្រាក់ (រើសខែ និងចំនួនខែ)៖</label>
+            <select id="quick-pay-month" class="w-full mb-3 border border-indigo-200 px-3 py-2 rounded-lg font-bold text-slate-700 bg-white outline-none focus:ring-2 focus:ring-indigo-400">
+                ${mOptsQuickPay}
+            </select>
+            <div class="flex items-center gap-3">
+                <input type="number" id="pay-num-months" value="1" min="1" max="12" class="w-20 border border-indigo-200 px-3 py-2.5 rounded-lg font-bold text-lg text-center outline-none focus:ring-2 focus:ring-amber-400 bg-white shadow-inner">
+                <button onclick="quickPay('${h.id}')" id="quick-pay-btn" class="flex-1 bg-amber-500 text-white font-bold py-3 rounded-lg hover:bg-amber-600 transition-colors shadow-md flex justify-center items-center gap-2 text-base">
+                    <i class="fa-solid fa-hand-holding-dollar"></i> បង់ប្រាក់
+                </button>
+            </div>
+        </div>`;
     }
 
     let manualEditHtml = '';
@@ -454,7 +462,6 @@ function showSidePanel(h) {
 
     const historyBtnHtml = `<button onclick="showHistory('${h.id}')" class="w-full mt-3 py-3 rounded-xl font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors shadow-sm flex justify-center items-center gap-2 text-base"><i class="fa-solid fa-clock-rotate-left"></i> មើលប្រវត្តិបង់ប្រាក់</button>`;
 
-    // 🚀 ប្រើ photo_url ជំនួស photo_base64
     document.getElementById('panel-content').innerHTML = `
       <div class="space-y-4">
           <div class="mb-4">
@@ -466,7 +473,7 @@ function showSidePanel(h) {
               </div>
           </div>
           <div><label class="block text-xs font-bold mb-1">លេខកូដផ្ទះ៖</label><input type="text" id="p-id" value="${h.custom_id||''}" class="w-full border px-3 py-2 rounded-lg font-bold bg-slate-50"></div>
-          <div><label class="block text-xs font-bold mb-1">ឈ្មោះអតិថិជន៖</label><input type="text" id="p-name" value="${h.customer_name || h.name ||''}" class="w-full border px-3 py-2 rounded-lg"></div>
+          <div><label class="block text-xs font-bold mb-1">ឈ្មោះអតិថិជន៖</label><input type="text" id="p-name" value="${h.customer_name || ''}" class="w-full border px-3 py-2 rounded-lg"></div>
           <div><label class="block text-xs font-bold mb-1">តម្លៃសេវា (៛)៖</label><input type="number" id="p-fee" value="${h.monthly_fee||0}" class="w-full border px-3 py-2 rounded-lg font-bold text-emerald-700"></div>
           <div><label class="block text-xs font-bold mb-1">តំបន់ (Zone)៖</label><input type="text" id="p-zone" value="${h.zone||''}" ${currentUserRole==='user'?'disabled':''} class="w-full border px-3 py-2 rounded-lg bg-slate-50"></div>
           
@@ -497,7 +504,8 @@ window.quickPay = async (id) => {
     const zone = document.getElementById('p-zone').value;
     const months = ['ខែមករា','ខែកកុម្ភៈ','ខែមីនា','ខែមេសា','ខែឧសភា','ខែមិថុនា','ខែកក្កដា','ខែសីហា','ខែកញ្ញា','ខែតុលា','ខែវិច្ឆិកា','ខែធ្នូ'];
 
-    let startMonthIndex = months.indexOf(document.getElementById('p-month').value);
+    // 🚀 យកខែដែលបានជ្រើសរើសពីប្រអប់ថ្មី
+    let startMonthIndex = months.indexOf(document.getElementById('quick-pay-month').value);
     if (startMonthIndex === -1) { alert("មានបញ្ហា! រកខែមិនឃើញ!"); return; }
 
     const recordsToInsert = [];
@@ -531,11 +539,10 @@ window.quickPay = async (id) => {
     if(house) showSidePanel(house);
 }
 
-// 🚀 មុខងារចាប់យករូបភាពដែលទើបជ្រើសរើស
 window.previewImage = (input, id) => {
   const file = input.files[0];
   if (file) {
-    currentSelectedFile = file; // រក្សាទុកក្នុង Memory ដើម្បីចាំ Upload ពេលចុច Save
+    currentSelectedFile = file; 
     const reader = new FileReader();
     reader.onload = e => { 
         const img = document.getElementById(`p-img-${id}`); 
@@ -547,7 +554,6 @@ window.previewImage = (input, id) => {
   }
 }
 
-// 🚀 មុខងាររក្សាទុក និង Upload រូបភាពចូល Storage 
 window.savePanelData = async (id) => {
     const btn = document.getElementById('save-panel-btn');
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> កំពុងរក្សាទុក...';
@@ -555,7 +561,6 @@ window.savePanelData = async (id) => {
 
     let finalPhotoUrl = document.getElementById(`p-img-${id}`).src; 
     
-    // បើមានជ្រើសរើសរូបថ្មី យើងត្រូវ Upload ចូល Storage សិន
     if (currentSelectedFile) {
         const fileExt = currentSelectedFile.name.split('.').pop();
         const fileName = `${id}_${Date.now()}.${fileExt}`;
@@ -566,7 +571,7 @@ window.savePanelData = async (id) => {
 
         if (!uploadError) {
             const { data } = supabaseClient.storage.from('households').getPublicUrl(fileName);
-            finalPhotoUrl = data.publicUrl; // យក Link មកប្រើ
+            finalPhotoUrl = data.publicUrl; 
         } else {
             console.error("Upload Image Error:", uploadError);
         }
@@ -581,14 +586,14 @@ window.savePanelData = async (id) => {
         monthly_fee: parseFloat(document.getElementById('p-fee').value)||0, 
         status_color: document.getElementById('p-status').value,
         payment_month: document.getElementById('p-month').value, 
-        photo_url: finalPhotoUrl // 🚀 Save តែ Link ទេ!
+        photo_url: finalPhotoUrl 
     };
 
     if (['admin', 'super admin'].includes(currentUserRole)) updateData.zone = document.getElementById('p-zone').value;
     
     await supabaseClient.from('households').update(updateData).eq('id', id);
     
-    currentSelectedFile = null; // លាងសម្អាត Memory
+    currentSelectedFile = null; 
     closeSidePanel(); 
     fetchAndRenderData();
 }
