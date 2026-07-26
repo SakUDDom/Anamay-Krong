@@ -260,8 +260,9 @@ function initLeafletMap() {
 
 async function fetchAndRenderData() {
     try {
+        // 🚀 ដកពាក្យ photo_url ចេញដើម្បីឱ្យផែនទី Load លឿនដូចរន្ទះ
         const { data: households, error: hError } = await supabaseClient.from('households')
-            .select('id, custom_id, customer_name, lat, lng, zone, status_color, monthly_fee, payment_month, photo_url');
+            .select('id, custom_id, customer_name, lat, lng, zone, status_color, monthly_fee, payment_month');
         
         if (hError) {
             alert("⚠️ កំហុស Supabase: " + hError.message); return;
@@ -371,6 +372,7 @@ function renderMapMarkers() {
         radius: (isZoneColorMode && currentUserRole === 'super admin') ? 7 : 9, fillColor: colorHex, color: '#ffffff', weight: 2, fillOpacity: 0.95 
     }).addTo(markersGroup);
     
+    // 🚀 ក្បាច់ទាញយករូបថតតែពេលគេចុចមើល (ការពារការស៊ី Data)
     marker.on('click', async (e) => {
       L.DomEvent.stopPropagation(e);
       if (currentInteractionMode === 'delete') {
@@ -382,7 +384,18 @@ function renderMapMarkers() {
              setInteractionMode('view'); fetchAndRenderData(); closeSidePanel();
           } catch(err) { alert("មានបញ្ហាក្នុងការលុប៖ " + err.message); }
         }
-      } else { showSidePanel(h); }
+      } else { 
+         // បង្ហាញសញ្ញាកំពុងដំណើរការសិនដើម្បីកុំឱ្យទើសភ្នែក
+         const btnPanel = document.getElementById('panel-content');
+         if(btnPanel) btnPanel.innerHTML = '<div class="h-full flex flex-col items-center justify-center text-indigo-500 font-bold mt-20"><i class="fa-solid fa-spinner fa-spin text-4xl mb-4"></i>កំពុងទាញយកទិន្នន័យ...</div>';
+         const p = document.getElementById('side-panel'); p.classList.remove('hidden'); p.classList.add('flex');
+         
+         // ទាញយករូបថតតែ១ប៉ុណ្ណោះ ពេលគេចុចមើលផ្ទះនេះ
+         const { data: houseDetails } = await supabaseClient.from('households').select('photo_url').eq('id', h.id).single();
+         h.photo_url = houseDetails ? houseDetails.photo_url : '';
+         
+         showSidePanel(h); 
+      }
     });
   });
 }
