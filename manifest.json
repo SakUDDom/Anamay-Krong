@@ -1,7 +1,7 @@
 {
-  "name": "Anamay Krong",
-  "short_name": "Anamay",
-  "description": "ប្រព័ន្ធគ្រប់គ្រងអនាម័យក្រុង",
+  "name": "Maps Ark",
+  "short_name": "Maps Ark",
+  "description": "ប្រព័ន្ធគ្រប់គ្រង Maps Ark",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f8fafc",
