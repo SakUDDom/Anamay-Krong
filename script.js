@@ -20,7 +20,6 @@ let isZoneColorMode = false;
 let currentMapZoneFilter = '';
 window.currentDrawMode = ''; 
 
-// 🚀 តួអថេរសម្រាប់ផ្ទុកសិទ្ធិ Dynamic Permissions
 let canEditRoof = false;
 let canEditRoad = false;
 let canEditBorder = false;
@@ -63,6 +62,25 @@ function getConvexHull(points) {
     }
     upper.pop(); lower.pop();
     return lower.concat(upper);
+}
+
+// 🚀 មុខងារបង្កើតលេខកូដ Auto ថ្មី (ID#001, ID#002, ...)
+function generateNextCustomId() {
+    let maxNum = 0;
+    localHouseholdsData.forEach(h => {
+        if (h.custom_id) {
+            const cid = h.custom_id.toUpperCase().trim();
+            if (cid.startsWith('ID#')) {
+                const numStr = cid.replace('ID#', '');
+                const num = parseInt(numStr);
+                if (!isNaN(num) && num > maxNum) {
+                    maxNum = num;
+                }
+            }
+        }
+    });
+    const nextNum = maxNum + 1;
+    return 'ID#' + nextNum.toString().padStart(3, '0');
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -129,13 +147,11 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
 
 async function initApp(session) {
   try {
-    // 🚀 ទាញយកសិទ្ធិ (Permissions) ពី Database មកប្រើ
     const { data: profile } = await supabaseClient.from('Profiles_Access').select('role, zone, can_edit_roof, can_edit_road, can_edit_border').eq('id', session.user.id).maybeSingle();
     
     currentUserRole = (profile?.role || 'user').toLowerCase();
     currentUserZone = profile?.zone || '';
 
-    // 🚀 កំណត់សិទ្ធិ៖ បើជា Super Admin គឺបានសិទ្ធិទាំងអស់ (True), បើមិនមែន គឺតាមសិទ្ធិដែលបានកំណត់ក្នុង Database
     canEditRoof = currentUserRole === 'super admin' ? true : (profile?.can_edit_roof || false);
     canEditRoad = currentUserRole === 'super admin' ? true : (profile?.can_edit_road || false);
     canEditBorder = currentUserRole === 'super admin' ? true : (profile?.can_edit_border || false);
@@ -145,12 +161,10 @@ async function initApp(session) {
     
     document.getElementById('open-tools-btn')?.classList.remove('hidden'); 
     
-    // 🚀 លាក់ផ្ទាំងទាំងអស់សិន
     document.getElementById('panel-section-roof')?.classList.add('hidden');
     document.getElementById('panel-section-road')?.classList.add('hidden');
     document.getElementById('panel-section-border')?.classList.add('hidden');
 
-    // 🚀 បង្ហាញផ្ទាំងទៅតាមសិទ្ធិ (Dynamic View)
     if (canEditRoof) document.getElementById('panel-section-roof')?.classList.remove('hidden');
     if (canEditRoad) document.getElementById('panel-section-road')?.classList.remove('hidden');
     if (canEditBorder) document.getElementById('panel-section-border')?.classList.remove('hidden');
@@ -217,40 +231,40 @@ function initLeafletMap() {
       const center = layer.getBounds ? layer.getBounds().getCenter() : layer.getLatLng();
 
       if (e.shape === 'Marker') {
-          const customId = prompt("សូមបញ្ចូលលេខកូដផ្ទះ (Point)៖");
-          if (!customId) { map.removeLayer(layer); return; }
-          const zone = ['admin', 'super admin'].includes(currentUserRole) ? (prompt("តំបន់ (Zone)៖", currentUserZone || "Zone") || '') : currentUserZone;
+          // 🚀 អត់មានលោត Prompt សួរញ៉េញ៉ៃទៀតទេ ចាប់យក Auto ID ភ្លាមៗ
+          const customId = generateNextCustomId();
+          localHouseholdsData.push({ custom_id: customId }); // Reserve ID បណ្តោះអាសន្នកុំឱ្យគូសលឿនពេកជាន់គ្នា
+          const zone = currentUserZone || '';
           
           await supabaseClient.from('households').insert({
-              lat: center.lat, lng: center.lng, custom_id: customId.toUpperCase(), status_color: 'yellow',
+              lat: center.lat, lng: center.lng, custom_id: customId, status_color: 'yellow',
               monthly_fee: 10000, zone: zone, payment_month: 'ខែមករា', shape_type: 'point', geojson: geojson
           });
           fetchAndRenderData();
           
       } else if (e.shape === 'Line' && window.currentDrawMode === 'road') {
-          // 🚀 ការពារសិទ្ធិ: បើគ្មានសិទ្ធិគូសផ្លូវទេ មិនឱ្យគូស
           if (!canEditRoad) { map.removeLayer(layer); return; }
           showRoadFormModal(layer, geojson);
           
       } else if (e.shape === 'Polygon') {
           if (window.currentDrawMode === 'roof') {
-              // 🚀 ការពារសិទ្ធិ: បើគ្មានសិទ្ធិគូសដំបូលទេ មិនឱ្យគូស
               if (!canEditRoof) { map.removeLayer(layer); return; }
 
-              const customId = prompt("សូមបញ្ចូលលេខកូដផ្ទះ (Roof Polygon)៖");
-              if (!customId) { map.removeLayer(layer); return; }
-              const zone = prompt("តំបន់ (Zone)៖", currentUserZone || "Zone") || '';
+              // 🚀 អត់មានលោត Prompt សួរញ៉េញ៉ៃទៀតទេ ចាប់យក Auto ID ភ្លាមៗសម្រាប់ដំបូល
+              const customId = generateNextCustomId();
+              localHouseholdsData.push({ custom_id: customId });
+              const zone = currentUserZone || '';
               
               await supabaseClient.from('households').insert({
-                  lat: center.lat, lng: center.lng, custom_id: customId.toUpperCase(), status_color: 'yellow',
+                  lat: center.lat, lng: center.lng, custom_id: customId, status_color: 'yellow',
                   monthly_fee: 10000, zone: zone, payment_month: 'ខែមករា', shape_type: 'polygon', geojson: geojson
               });
               fetchAndRenderData();
               
           } else if (window.currentDrawMode === 'border') {
-              // 🚀 ការពារសិទ្ធិ: បើគ្មានសិទ្ធិគូសព្រំដែនទេ មិនឱ្យគូស
               if (!canEditBorder) { map.removeLayer(layer); return; }
 
+              // ព្រំដែនតំបន់ (Zone Border) នៅសល់ Prompt ព្រោះវាត្រូវតែមានឈ្មោះភ្លាមៗ
               const zoneName = prompt("សូមបញ្ចូលឈ្មោះតំបន់ (Zone) សម្រាប់ព្រំដែននេះ៖");
               if (!zoneName) { map.removeLayer(layer); return; }
               await supabaseClient.from('zone_borders').upsert({ zone: zoneName, geojson: geojson });
@@ -273,7 +287,6 @@ function initLeafletMap() {
           } else { fetchAndRenderData(); }
       } 
       else if (layer.dbType === 'household') {
-          // ផ្ទះ និង ដំបូល (រាល់ Admin ឬ User អាចលុបបានតាមធម្មតា ប្រសិនបើពួកគេបានចូល)
           if (confirm(`តើអ្នកពិតជាចង់លុបផ្ទះ ${layer.dbCustomId} រួមទាំងប្រវត្តិបង់ប្រាក់ទាំងអស់របស់គាត់មែនទេ?`)) {
              await supabaseClient.from('payments').delete().eq('household_id', layer.dbId);
              await supabaseClient.from('households').delete().eq('id', layer.dbId);
@@ -289,7 +302,6 @@ function initLeafletMap() {
   });
 }
 
-// ផ្ទាំងបំពេញ/កែប្រែព័ត៌មានផ្លូវ
 window.showRoadFormModal = (layer, geojson, existingRoad = null) => {
     window.tempRoadLayer = layer;
     window.tempRoadGeojson = geojson;
@@ -395,30 +407,39 @@ function renderMapMarkers() {
   let dataToRender = localHouseholdsData;
 
   const manualZones = [];
-  if (currentUserRole === 'super admin') {
-      zoneBordersData.forEach(border => {
-          if (!border.geojson) return;
-          manualZones.push(border.zone);
-          const zColor = getZoneColor(border.zone);
+  zoneBordersData.forEach(border => {
+      if (!border.geojson) return;
+      manualZones.push(border.zone);
+      
+      if (!canEditBorder) return;
 
-          try {
-              const layer = L.geoJSON(border.geojson, {
-                  style: { color: zColor, weight: 4, fillOpacity: isZoneColorMode ? 0.3 : 0.05, dashArray: '8, 10' }
-              }).bindTooltip(`ព្រំដែនតំបន់៖ <b>${border.zone}</b>`, {sticky: true, className: 'font-bold text-sm'});
+      const zColor = getZoneColor(border.zone);
+      try {
+          const layer = L.geoJSON(border.geojson, {
+              style: { color: zColor, weight: 4, fillOpacity: isZoneColorMode ? 0.3 : 0.05, dashArray: '8, 10' }
+          }).bindTooltip(`ព្រំដែនតំបន់៖ <b>${border.zone}</b>`, {sticky: true, className: 'font-bold text-sm'});
 
-              layer.eachLayer(l => {
-                  l.dbId = border.id; l.dbType = 'zone_border'; 
-                  const savePolygonUpdates = async () => {
-                      if (!canEditBorder) return;
-                      await supabaseClient.from('zone_borders').update({ geojson: l.toGeoJSON() }).eq('id', border.id);
-                  };
-                  l.on('pm:update', savePolygonUpdates);  
-                  l.on('pm:dragend', savePolygonUpdates); 
+          layer.eachLayer(l => {
+              l.dbId = border.id; l.dbType = 'zone_border'; 
+              const savePolygonUpdates = async () => {
+                  if (!canEditBorder) return;
+                  await supabaseClient.from('zone_borders').update({ geojson: l.toGeoJSON() }).eq('id', border.id);
+              };
+              l.on('pm:update', savePolygonUpdates);  
+              l.on('pm:dragend', savePolygonUpdates); 
+              
+              l.on('dblclick', async () => {
+                  if (!canEditBorder) return;
+                  const newZoneName = prompt("កែប្រែឈ្មោះតំបន់ (Zone) សម្រាប់ព្រំដែននេះ៖", border.zone);
+                  if (newZoneName && newZoneName.trim() !== "" && newZoneName !== border.zone) {
+                      await supabaseClient.from('zone_borders').update({ zone: newZoneName.trim() }).eq('id', border.id);
+                      fetchAndRenderData();
+                  }
               });
-              bordersGroup.addLayer(layer);
-          } catch (geoError) {}
-      });
-  }
+          });
+          bordersGroup.addLayer(layer);
+      } catch (geoError) {}
+  });
 
   if (currentUserRole === 'super admin') {
       const zoneGroups = {};
@@ -443,12 +464,14 @@ function renderMapMarkers() {
 
   roadsData.forEach(road => {
       if(!road.geojson) return;
+      
+      if (!canEditRoad) return;
+
       let roadColor = '#94a3b8'; 
       if(road.road_type === 'Land road') roadColor = '#d97706';
       if(road.road_type === 'Hight Ways road') roadColor = '#3b82f6';
       if(road.road_type === 'Nation road') roadColor = '#16a34a';
 
-      // អ្នកគ្រប់គ្នាអាចឃើញផ្លូវ (ដើម្បីងាយមើលផែនទី) ប៉ុន្តែមានតែអ្នកមានសិទ្ធិទេទើបអាចកែបាន
       const rLayer = L.geoJSON(road.geojson, {
           style: { color: roadColor, weight: 6, opacity: 0.9 }
       }).bindTooltip(`<div class="text-center"><b>${road.name || 'មិនមានឈ្មោះផ្លូវ'}</b><br><span class="text-xs text-slate-500">${road.road_type} | ទំហំ: ${road.width || 'មិនបញ្ជាក់'}</span></div>`, {sticky: true, className: 'font-bold'});
@@ -493,6 +516,8 @@ function renderMapMarkers() {
     };
 
     if (h.shape_type === 'polygon' && h.geojson) {
+        if (!canEditRoof) return;
+
         const roofLayer = L.geoJSON(h.geojson, {
             style: { color: '#ffffff', weight: 1.5, fillColor: colorHex, fillOpacity: 0.85 }
         }).bindTooltip(`<b>${h.custom_id}</b>`, {permanent: false, direction: 'center', className: 'text-xs font-bold bg-transparent border-none shadow-none text-white outline-none'});
@@ -562,6 +587,9 @@ function showSidePanel(h) {
 
     const historyBtnHtml = `<button onclick="showHistory('${h.id}')" class="w-full mt-3 py-3 rounded-xl font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors shadow-sm flex justify-center items-center gap-2 text-base"><i class="fa-solid fa-clock-rotate-left"></i> មើលប្រវត្តិបង់ប្រាក់</button>`;
 
+    const idInputDisabled = currentUserRole !== 'super admin' ? 'disabled' : '';
+    const idInputClass = currentUserRole !== 'super admin' ? 'bg-slate-200 cursor-not-allowed text-slate-500 opacity-70' : 'bg-white';
+
     document.getElementById('panel-content').innerHTML = `
       <div class="space-y-4">
           <div class="mb-4">
@@ -572,7 +600,7 @@ function showSidePanel(h) {
                   <span id="p-img-txt-${h.id}" class="text-slate-400 text-sm ${h.photo_url?'hidden':''}">គ្មានរូបថត</span>
               </div>
           </div>
-          <div><label class="block text-xs font-bold mb-1">លេខកូដផ្ទះ៖</label><input type="text" id="p-id" value="${h.custom_id||''}" class="w-full border px-3 py-2 rounded-lg font-bold bg-slate-50"></div>
+          <div><label class="block text-xs font-bold mb-1">លេខកូដផ្ទះ៖</label><input type="text" id="p-id" value="${h.custom_id||''}" ${idInputDisabled} class="w-full border px-3 py-2 rounded-lg font-bold ${idInputClass}"></div>
           <div><label class="block text-xs font-bold mb-1">ឈ្មោះអតិថិជន៖</label><input type="text" id="p-name" value="${h.customer_name || ''}" class="w-full border px-3 py-2 rounded-lg"></div>
           <div><label class="block text-xs font-bold mb-1">តម្លៃសេវា (៛)៖</label><input type="number" id="p-fee" value="${h.monthly_fee||0}" class="w-full border px-3 py-2 rounded-lg font-bold text-emerald-700"></div>
           <div><label class="block text-xs font-bold mb-1">តំបន់ (Zone)៖</label><input type="text" id="p-zone" value="${h.zone||''}" ${currentUserRole==='user'?'disabled':''} class="w-full border px-3 py-2 rounded-lg bg-slate-50"></div>
@@ -750,7 +778,7 @@ window.printBill = (id) => {
     const month = document.getElementById('p-month').value, fee = document.getElementById('p-fee').value, rawStatus = document.getElementById('p-status').value;
     const imgElement = document.getElementById(`p-img-${id}`); let customerImgSrc = '';
     if (imgElement && !imgElement.classList.contains('hidden')) customerImgSrc = imgElement.src;
-    const logoSrc = new URL('logo/logo.JPEG', window.location.href).href; 
+    const logoSrc = new URL('logo/Map Ark.png', window.location.href).href;
     let statusText = rawStatus === 'blue' ? "បានបង់" : (rawStatus === 'red' ? "ទីតាំងបិទ" : (rawStatus === 'black' ? "បានបង់តែទុកសិន" : "មិនទាន់បានបង់"));
     const today = new Date(); const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
 
