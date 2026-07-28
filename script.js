@@ -64,7 +64,6 @@ function getConvexHull(points) {
     return lower.concat(upper);
 }
 
-// 🚀 ដោះស្រាយបញ្ហាជាន់ ID គ្នា៖ ប្រើលេខ Random ៤ ខ្ទង់ដើម្បីកុំឱ្យ Error ពេល User ទាញបញ្ចូល
 function generateNextCustomId() {
     const randomCode = Math.floor(1000 + Math.random() * 9000);
     return 'ID#' + randomCode;
@@ -204,11 +203,12 @@ function initLeafletMap() {
   L.control.zoom({ position: 'bottomright' }).addTo(map);
   L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', { maxZoom: 21, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
   
-  pointsGroup = L.featureGroup().addTo(map);
-  roofsGroup = L.featureGroup().addTo(map);
-  roadsGroup = L.featureGroup().addTo(map);
-  bordersGroup = L.featureGroup().addTo(map);
-  autoZonesGroup = L.featureGroup().addTo(map);
+  // 🚀 អាអូនបានដកពាក្យ .addTo(map) ចេញអស់ហើយ! វាមានន័យថាវាអត់បង្ហាញលើផែនទីអូតូទេ ទាល់តែអ្នកប្រើចុចបើកទើបវាចេញ!
+  pointsGroup = L.featureGroup();
+  roofsGroup = L.featureGroup();
+  roadsGroup = L.featureGroup();
+  bordersGroup = L.featureGroup();
+  autoZonesGroup = L.featureGroup();
 
   map.on('pm:create', async (e) => {
       if(map.pm) map.pm.disableDraw();
@@ -221,7 +221,6 @@ function initLeafletMap() {
           const customId = generateNextCustomId();
           const zone = currentUserZone || '';
           
-          // 🚀 ថែមប្រព័ន្ធចាប់ Error បើ Supabase គាំង ឬ RLS បដិសេធ
           const { error } = await supabaseClient.from('households').insert({
               lat: center.lat, lng: center.lng, custom_id: customId, status_color: 'yellow',
               monthly_fee: 10000, zone: zone, payment_month: 'ខែមករា', shape_type: 'point', geojson: geojson
@@ -323,8 +322,8 @@ window.showRoadFormModal = (layer, geojson, existingRoad = null) => {
             <select id="road-type" class="w-full border border-slate-300 p-2.5 mb-5 rounded-lg outline-none focus:border-indigo-500 font-bold bg-slate-50 text-indigo-700">
                 <option value="Land road" ${typeVal === 'Land road' ? 'selected' : ''}>Land road (ផ្លូវដី)</option>
                 <option value="Concrete road" ${typeVal === 'Concrete road' ? 'selected' : ''}>Concrete road (ផ្លូវបេតុង)</option>
-                <option value="Asphalt road" ${typeVal === 'Asphalt road' ? 'selected' : ''}>Asphalt road (ផ្លូវកៅស៊ូរ)</option>
                 <option value="Hight Ways road" ${typeVal === 'Hight Ways road' ? 'selected' : ''}>Hight Ways road (ផ្លូវហាយវេ)</option>
+                <option value="Asphalt road" ${typeVal === 'Asphalt road' ? 'selected' : ''}>Asphalt road (ផ្លូវកៅស៊ូរ)</option>
                 <option value="Nation road" ${typeVal === 'Nation road' ? 'selected' : ''}>Nation road (ផ្លូវជាតិ)</option>
             </select>
             <div class="flex gap-2">
@@ -459,7 +458,7 @@ function renderMapMarkers() {
       }
   }
 
-  roadsData.forEach(road => {
+   roadsData.forEach(road => {
       if(!road.geojson) return;
       
       if (!canEditRoad) return;
@@ -503,9 +502,7 @@ function renderMapMarkers() {
         else if (h.status_color === 'black') colorHex = '#020617';
     }
 
-    // 🚀 ដោះស្រាយបញ្ហាចុចលុប (Eraser) មិនដើរ ដោយសារផ្ទាំង Panel រាំងខ្ទប់
     const handleHouseholdClick = async (e, layer) => {
-        // បើកំពុងបើកមុខងារលុប (Eraser) ហាមបើកផ្ទាំងចំហៀងដាច់ខាត!
         if (map.pm && map.pm.globalRemovalModeEnabled()) return; 
 
         L.DomEvent.stopPropagation(e);

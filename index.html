@@ -7,7 +7,7 @@
   
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#4f46e5">
-  <link rel="apple-touch-icon" href="logo/Map Ark.png">
+  <link rel="apple-touch-icon" href="logo/Map_Ark.png">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -29,7 +29,7 @@
   <div id="login-page" class="absolute inset-0 z-[3000] flex items-center justify-center bg-indigo-900">
     <div class="w-full max-w-md bg-white rounded-xl shadow-2xl p-8 m-4">
       <div class="text-center mb-6">
-        <img src="logo/Map Ark.png" alt="Maps Ark Logo" onerror="this.style.display='none'" class="w-24 h-24 mx-auto mb-4 object-contain rounded-full shadow-md border-2 border-indigo-100">
+        <img src="logo/Map_Ark.png" alt="Maps Ark Logo" onerror="this.style.display='none'" class="w-24 h-24 mx-auto mb-4 object-contain rounded-full shadow-md border-2 border-indigo-100">
         <h1 class="text-2xl font-bold text-slate-800">ចូលប្រើប្រព័ន្ធ</h1>
       </div>
       <form id="login-form" class="space-y-4">
@@ -46,7 +46,7 @@
     <!-- Header -->
     <header class="bg-white shadow-sm z-20 px-4 py-3 flex justify-between items-center border-b border-slate-200">
       <div class="flex items-center gap-3">
-        <img src="logo/Map Ark.png" alt="Logo" onerror="this.style.display='none'" class="w-8 h-8 object-contain rounded-md">
+        <img src="logo/Map_Ark.png" alt="Logo" onerror="this.style.display='none'" class="w-8 h-8 object-contain rounded-md">
         <h1 class="text-xl font-bold text-indigo-700">Maps Ark</h1>
         <span id="user-role-badge" class="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded-full font-bold border">...</span>
       </div>
@@ -85,8 +85,8 @@
                     </div>
                     <div class="flex justify-center">
                         <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                            <input type="checkbox" id="toggle-points" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                            <label for="toggle-points" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer text-center text-[10px] font-bold text-white leading-6 pl-1">ON</label>
+                            <input type="checkbox" id="toggle-points" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                            <label for="toggle-points" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer text-center text-[10px] font-bold text-white leading-6 pl-1"></label>
                         </div>
                     </div>
                 </div>
@@ -103,8 +103,8 @@
                     </div>
                     <div class="flex justify-center">
                         <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                            <input type="checkbox" id="toggle-roofs" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                            <label for="toggle-roofs" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer text-center text-[10px] font-bold text-white leading-6 pl-1">ON</label>
+                            <input type="checkbox" id="toggle-roofs" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                            <label for="toggle-roofs" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer text-center text-[10px] font-bold text-white leading-6 pl-1"></label>
                         </div>
                     </div>
                 </div>
@@ -119,8 +119,8 @@
                     </div>
                     <div class="flex justify-center">
                         <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                            <input type="checkbox" id="toggle-roads" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                            <label for="toggle-roads" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer text-center text-[10px] font-bold text-white leading-6 pl-1">ON</label>
+                            <input type="checkbox" id="toggle-roads" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                            <label for="toggle-roads" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer text-center text-[10px] font-bold text-white leading-6 pl-1"></label>
                         </div>
                     </div>
                 </div>
@@ -136,20 +136,19 @@
                         <button id="btn-rot-border" class="flex flex-col items-center gap-1 hover:opacity-70"><i class="fa-solid fa-rotate text-xl text-slate-700"></i><span class="text-[10px] font-bold text-slate-600">Rotate</span></button>
                     </div>
                     
-                    <!-- 🚀 ថែមរន្ធកុងតាក់សម្រាប់ Manual Border និង Auto Zone -->
                     <div class="flex flex-col gap-3 mt-4 border-t border-slate-100 pt-4">
                         <div class="flex justify-between items-center px-2">
                             <span class="text-xs font-bold text-slate-600"><i class="fa-solid fa-pen-ruler mr-1 text-indigo-500"></i> ព្រំដែនគូសផ្ទាល់</span>
                             <div class="relative inline-block w-12 align-middle select-none transition duration-200 ease-in">
-                                <input type="checkbox" id="toggle-borders" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                                <label for="toggle-borders" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer text-center text-[10px] font-bold text-white leading-6 pl-1">ON</label>
+                                <input type="checkbox" id="toggle-borders" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                                <label for="toggle-borders" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer text-center text-[10px] font-bold text-white leading-6 pl-1"></label>
                             </div>
                         </div>
                         <div class="flex justify-between items-center px-2">
                             <span class="text-xs font-bold text-slate-600"><i class="fa-solid fa-robot mr-1 text-emerald-500"></i> ព្រំដែន Auto</span>
                             <div class="relative inline-block w-12 align-middle select-none transition duration-200 ease-in">
-                                <input type="checkbox" id="toggle-auto-zones" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
-                                <label for="toggle-auto-zones" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer text-center text-[10px] font-bold text-white leading-6 pl-1">ON</label>
+                                <input type="checkbox" id="toggle-auto-zones" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                                <label for="toggle-auto-zones" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer text-center text-[10px] font-bold text-white leading-6 pl-1"></label>
                             </div>
                         </div>
                     </div>
@@ -221,7 +220,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
-  <script src="script.js?v=68"></script>
+  <script src="script.js?v=70"></script>
   
   <script>
     if ('serviceWorker' in navigator) {
