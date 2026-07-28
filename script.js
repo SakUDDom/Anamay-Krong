@@ -327,6 +327,7 @@ window.showRoadFormModal = (layer, geojson, existingRoad = null) => {
             <select id="road-type" class="w-full border border-slate-300 p-2.5 mb-5 rounded-lg outline-none focus:border-indigo-500 font-bold bg-slate-50 text-indigo-700">
                 <option value="Land road" ${typeVal === 'Land road' ? 'selected' : ''}>Land road (ផ្លូវដី)</option>
                 <option value="Concrete road" ${typeVal === 'Concrete road' ? 'selected' : ''}>Concrete road (ផ្លូវបេតុង)</option>
+                <option value="Asphalt road" ${typeVal === 'Asphalt road' ? 'selected' : ''}>Asphalt road (ផ្លូវកៅស៊ូរ)</option>
                 <option value="Hight Ways road" ${typeVal === 'Hight Ways road' ? 'selected' : ''}>Hight Ways road (ផ្លូវហាយវេ)</option>
                 <option value="Nation road" ${typeVal === 'Nation road' ? 'selected' : ''}>Nation road (ផ្លូវជាតិ)</option>
             </select>
