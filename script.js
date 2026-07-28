@@ -64,22 +64,10 @@ function getConvexHull(points) {
     return lower.concat(upper);
 }
 
+// 🚀 ដោះស្រាយបញ្ហាជាន់ ID គ្នា៖ ប្រើលេខ Random ៤ ខ្ទង់ដើម្បីកុំឱ្យ Error ពេល User ទាញបញ្ចូល
 function generateNextCustomId() {
-    let maxNum = 0;
-    localHouseholdsData.forEach(h => {
-        if (h.custom_id) {
-            const cid = h.custom_id.toUpperCase().trim();
-            if (cid.startsWith('ID#')) {
-                const numStr = cid.replace('ID#', '');
-                const num = parseInt(numStr);
-                if (!isNaN(num) && num > maxNum) {
-                    maxNum = num;
-                }
-            }
-        }
-    });
-    const nextNum = maxNum + 1;
-    return 'ID#' + nextNum.toString().padStart(3, '0');
+    const randomCode = Math.floor(1000 + Math.random() * 9000);
+    return 'ID#' + randomCode;
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -113,8 +101,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('toggle-roofs')?.addEventListener('change', (e) => { e.target.checked ? map.addLayer(roofsGroup) : map.removeLayer(roofsGroup); });
   document.getElementById('toggle-roads')?.addEventListener('change', (e) => { e.target.checked ? map.addLayer(roadsGroup) : map.removeLayer(roadsGroup); });
   document.getElementById('toggle-borders')?.addEventListener('change', (e) => { e.target.checked ? map.addLayer(bordersGroup) : map.removeLayer(bordersGroup); });
-  
-  // 🚀 បញ្ជាកុងតាក់ Auto Zone ថ្មី
   document.getElementById('toggle-auto-zones')?.addEventListener('change', (e) => { e.target.checked ? map.addLayer(autoZonesGroup) : map.removeLayer(autoZonesGroup); });
 
   document.getElementById('map-search-btn')?.addEventListener('click', handleMapSearch);
@@ -233,13 +219,15 @@ function initLeafletMap() {
 
       if (e.shape === 'Marker') {
           const customId = generateNextCustomId();
-          localHouseholdsData.push({ custom_id: customId });
           const zone = currentUserZone || '';
           
-          await supabaseClient.from('households').insert({
+          // 🚀 ថែមប្រព័ន្ធចាប់ Error បើ Supabase គាំង ឬ RLS បដិសេធ
+          const { error } = await supabaseClient.from('households').insert({
               lat: center.lat, lng: center.lng, custom_id: customId, status_color: 'yellow',
               monthly_fee: 10000, zone: zone, payment_month: 'ខែមករា', shape_type: 'point', geojson: geojson
           });
+          if (error) alert("⚠️ មិនអាចបញ្ចូលទិន្នន័យបានទេ៖ " + error.message);
+          
           fetchAndRenderData();
           
       } else if (e.shape === 'Line' && window.currentDrawMode === 'road') {
@@ -251,13 +239,14 @@ function initLeafletMap() {
               if (!canEditRoof) { map.removeLayer(layer); return; }
 
               const customId = generateNextCustomId();
-              localHouseholdsData.push({ custom_id: customId });
               const zone = currentUserZone || '';
               
-              await supabaseClient.from('households').insert({
+              const { error } = await supabaseClient.from('households').insert({
                   lat: center.lat, lng: center.lng, custom_id: customId, status_color: 'yellow',
                   monthly_fee: 10000, zone: zone, payment_month: 'ខែមករា', shape_type: 'polygon', geojson: geojson
               });
+              if (error) alert("⚠️ មិនអាចបញ្ចូលទិន្នន័យបានទេ៖ " + error.message);
+              
               fetchAndRenderData();
               
           } else if (window.currentDrawMode === 'border') {
@@ -265,7 +254,9 @@ function initLeafletMap() {
 
               const zoneName = prompt("សូមបញ្ចូលឈ្មោះតំបន់ (Zone) សម្រាប់ព្រំដែននេះ៖");
               if (!zoneName) { map.removeLayer(layer); return; }
-              await supabaseClient.from('zone_borders').upsert({ zone: zoneName, geojson: geojson });
+              const { error } = await supabaseClient.from('zone_borders').upsert({ zone: zoneName, geojson: geojson });
+              if (error) alert("⚠️ កំហុស៖ " + error.message);
+              
               fetchAndRenderData();
           } else {
               map.removeLayer(layer);
@@ -281,21 +272,28 @@ function initLeafletMap() {
       if(layer.dbType === 'road') {
           if (!canEditRoad) { fetchAndRenderData(); return; }
           if(confirm("តើអ្នកប្រាកដជាចង់លុបខ្សែផ្លូវនេះចោលមែនទេ?")) {
-              await supabaseClient.from('roads').delete().eq('id', layer.dbId);
-          } else { fetchAndRenderData(); }
+              const { error } = await supabaseClient.from('roads').delete().eq('id', layer.dbId);
+              if (error) alert("⚠️ កំហុស៖ " + error.message);
+          } 
+          fetchAndRenderData(); 
       } 
       else if (layer.dbType === 'household') {
           if (confirm(`តើអ្នកពិតជាចង់លុបផ្ទះ ${layer.dbCustomId} រួមទាំងប្រវត្តិបង់ប្រាក់ទាំងអស់របស់គាត់មែនទេ?`)) {
-             await supabaseClient.from('payments').delete().eq('household_id', layer.dbId);
-             await supabaseClient.from('households').delete().eq('id', layer.dbId);
+             const { error: err1 } = await supabaseClient.from('payments').delete().eq('household_id', layer.dbId);
+             const { error: err2 } = await supabaseClient.from('households').delete().eq('id', layer.dbId);
+             if (err1) alert("⚠️ កំហុស (Payments)៖ " + err1.message);
+             if (err2) alert("⚠️ កំហុស (Households)៖ " + err2.message);
              closeSidePanel();
-          } else { fetchAndRenderData(); }
+          } 
+          fetchAndRenderData(); 
       } 
       else if (layer.dbType === 'zone_border') {
           if (!canEditBorder) { fetchAndRenderData(); return; }
           if(confirm("តើអ្នកពិតជាចង់លុបព្រំដែនតំបន់នេះមែនទេ?")) {
-              await supabaseClient.from('zone_borders').delete().eq('id', layer.dbId);
-          } else { fetchAndRenderData(); }
+              const { error } = await supabaseClient.from('zone_borders').delete().eq('id', layer.dbId);
+              if (error) alert("⚠️ កំហុស៖ " + error.message);
+          } 
+          fetchAndRenderData(); 
       }
   });
 }
@@ -325,7 +323,6 @@ window.showRoadFormModal = (layer, geojson, existingRoad = null) => {
             <select id="road-type" class="w-full border border-slate-300 p-2.5 mb-5 rounded-lg outline-none focus:border-indigo-500 font-bold bg-slate-50 text-indigo-700">
                 <option value="Land road" ${typeVal === 'Land road' ? 'selected' : ''}>Land road (ផ្លូវដី)</option>
                 <option value="Concrete road" ${typeVal === 'Concrete road' ? 'selected' : ''}>Concrete road (ផ្លូវបេតុង)</option>
-                <option value="Asphalt road" ${typeVal === 'Asphalt road' ? 'selected' : ''}>Asphalt road (ផ្លូវកៅស៊ូរ)</option>
                 <option value="Hight Ways road" ${typeVal === 'Hight Ways road' ? 'selected' : ''}>Hight Ways road (ផ្លូវហាយវេ)</option>
                 <option value="Nation road" ${typeVal === 'Nation road' ? 'selected' : ''}>Nation road (ផ្លូវជាតិ)</option>
             </select>
@@ -466,12 +463,10 @@ function renderMapMarkers() {
       
       if (!canEditRoad) return;
 
-      let roadColor = '#c4c10e'; 
+      let roadColor = '#94a3b8'; 
       if(road.road_type === 'Land road') roadColor = '#d97706';
       if(road.road_type === 'Hight Ways road') roadColor = '#3b82f6';
       if(road.road_type === 'Nation road') roadColor = '#16a34a';
-      if(road.road_type === 'Concrete road') roadColor = '#a3164e';
-      if(road.road_type === 'Asphalt road') roadColor = '#9716a3';
 
       const rLayer = L.geoJSON(road.geojson, {
           style: { color: roadColor, weight: 6, opacity: 0.9 }
@@ -505,7 +500,11 @@ function renderMapMarkers() {
         else if (h.status_color === 'black') colorHex = '#020617';
     }
 
+    // 🚀 ដោះស្រាយបញ្ហាចុចលុប (Eraser) មិនដើរ ដោយសារផ្ទាំង Panel រាំងខ្ទប់
     const handleHouseholdClick = async (e, layer) => {
+        // បើកំពុងបើកមុខងារលុប (Eraser) ហាមបើកផ្ទាំងចំហៀងដាច់ខាត!
+        if (map.pm && map.pm.globalRemovalModeEnabled()) return; 
+
         L.DomEvent.stopPropagation(e);
         const btnPanel = document.getElementById('panel-content');
         if(btnPanel) btnPanel.innerHTML = '<div class="h-full flex flex-col items-center justify-center text-indigo-500 font-bold mt-20"><i class="fa-solid fa-spinner fa-spin text-4xl mb-4"></i>កំពុងទាញយកទិន្នន័យ...</div>';
@@ -530,7 +529,8 @@ function renderMapMarkers() {
             const saveRoofUpdate = async () => {
                 if (!canEditRoof) return;
                 const center = l.getBounds().getCenter();
-                await supabaseClient.from('households').update({geojson: l.toGeoJSON(), lat: center.lat, lng: center.lng}).eq('id', h.id);
+                const { error } = await supabaseClient.from('households').update({geojson: l.toGeoJSON(), lat: center.lat, lng: center.lng}).eq('id', h.id);
+                if (error) alert("⚠️ កំហុស: " + error.message);
             };
             l.on('pm:update', saveRoofUpdate);
             l.on('pm:dragend', saveRoofUpdate);
@@ -545,7 +545,8 @@ function renderMapMarkers() {
         marker.on('click', (e) => handleHouseholdClick(e, marker));
         
         const savePointUpdate = async () => {
-            await supabaseClient.from('households').update({lat: marker.getLatLng().lat, lng: marker.getLatLng().lng}).eq('id', h.id);
+            const { error } = await supabaseClient.from('households').update({lat: marker.getLatLng().lat, lng: marker.getLatLng().lng}).eq('id', h.id);
+            if (error) alert("⚠️ កំហុស: " + error.message);
         };
         marker.on('pm:dragend', savePointUpdate);
         
@@ -657,7 +658,8 @@ window.quickPay = async (id) => {
     const btn = document.getElementById('quick-pay-btn');
     if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> កំពុងបង់ប្រាក់...'; }
 
-    await supabaseClient.from('payments').insert(recordsToInsert);
+    const { error } = await supabaseClient.from('payments').insert(recordsToInsert);
+    if (error) alert("⚠️ កំហុស: " + error.message);
     
     let nextUnpaidMonth = months[(lastPaidMonthIndex + 1) % 12];
     await supabaseClient.from('households').update({ status_color: 'blue', custom_id: customId, customer_name: cusName, monthly_fee: fee, payment_month: nextUnpaidMonth }).eq('id', id);
@@ -719,7 +721,8 @@ window.savePanelData = async (id) => {
 
     if (['admin', 'super admin'].includes(currentUserRole)) updateData.zone = document.getElementById('p-zone').value;
     
-    await supabaseClient.from('households').update(updateData).eq('id', id);
+    const { error } = await supabaseClient.from('households').update(updateData).eq('id', id);
+    if (error) alert("⚠️ កំហុស: " + error.message);
     
     currentSelectedFile = null; 
     closeSidePanel(); 
@@ -779,7 +782,7 @@ window.printBill = (id) => {
     const month = document.getElementById('p-month').value, fee = document.getElementById('p-fee').value, rawStatus = document.getElementById('p-status').value;
     const imgElement = document.getElementById(`p-img-${id}`); let customerImgSrc = '';
     if (imgElement && !imgElement.classList.contains('hidden')) customerImgSrc = imgElement.src;
-    const logoSrc = new URL('logo/Map Ark.png', window.location.href).href; 
+    const logoSrc = new URL('logo/Map_Ark.png', window.location.href).href; 
     let statusText = rawStatus === 'blue' ? "បានបង់" : (rawStatus === 'red' ? "ទីតាំងបិទ" : (rawStatus === 'black' ? "បានបង់តែទុកសិន" : "មិនទាន់បានបង់"));
     const today = new Date(); const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
 
@@ -817,5 +820,5 @@ window.exportToCSV = () => {
     let csv = "\uFEFFលេខកូដ,ឈ្មោះ,តម្លៃត្រូវបង់,ខែត្រូវបង់,តំបន់\n"; 
     currentReportData.forEach(h => { csv += `"${h.custom_id}","${h.customer_name||''}","${h.monthly_fee||0}","${h.payment_month||''}","${h.zone||''}"\n`; });
     const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-    link.download = `Maps Ark_Report.csv`; link.click();
+    link.download = `Maps_Ark_Report.csv`; link.click();
 }
