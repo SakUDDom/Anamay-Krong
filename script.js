@@ -64,7 +64,6 @@ function getConvexHull(points) {
     return lower.concat(upper);
 }
 
-// 🚀 មុខងារបង្កើតលេខកូដ Auto ថ្មី (ID#001, ID#002, ...)
 function generateNextCustomId() {
     let maxNum = 0;
     localHouseholdsData.forEach(h => {
@@ -115,8 +114,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('toggle-roads')?.addEventListener('change', (e) => { e.target.checked ? map.addLayer(roadsGroup) : map.removeLayer(roadsGroup); });
   document.getElementById('toggle-borders')?.addEventListener('change', (e) => { e.target.checked ? map.addLayer(bordersGroup) : map.removeLayer(bordersGroup); });
   
+  // 🚀 បញ្ជាកុងតាក់ Auto Zone ថ្មី
+  document.getElementById('toggle-auto-zones')?.addEventListener('change', (e) => { e.target.checked ? map.addLayer(autoZonesGroup) : map.removeLayer(autoZonesGroup); });
+
   document.getElementById('map-search-btn')?.addEventListener('click', handleMapSearch);
-  
   document.getElementById('global-zone-select')?.addEventListener('change', (e) => { currentReportZoneFilter = e.target.value; calculateReports(); });
   
   document.getElementById('logout-btn')?.addEventListener('click', async () => await supabaseClient.auth.signOut());
@@ -231,9 +232,8 @@ function initLeafletMap() {
       const center = layer.getBounds ? layer.getBounds().getCenter() : layer.getLatLng();
 
       if (e.shape === 'Marker') {
-          // 🚀 អត់មានលោត Prompt សួរញ៉េញ៉ៃទៀតទេ ចាប់យក Auto ID ភ្លាមៗ
           const customId = generateNextCustomId();
-          localHouseholdsData.push({ custom_id: customId }); // Reserve ID បណ្តោះអាសន្នកុំឱ្យគូសលឿនពេកជាន់គ្នា
+          localHouseholdsData.push({ custom_id: customId });
           const zone = currentUserZone || '';
           
           await supabaseClient.from('households').insert({
@@ -250,7 +250,6 @@ function initLeafletMap() {
           if (window.currentDrawMode === 'roof') {
               if (!canEditRoof) { map.removeLayer(layer); return; }
 
-              // 🚀 អត់មានលោត Prompt សួរញ៉េញ៉ៃទៀតទេ ចាប់យក Auto ID ភ្លាមៗសម្រាប់ដំបូល
               const customId = generateNextCustomId();
               localHouseholdsData.push({ custom_id: customId });
               const zone = currentUserZone || '';
@@ -264,7 +263,6 @@ function initLeafletMap() {
           } else if (window.currentDrawMode === 'border') {
               if (!canEditBorder) { map.removeLayer(layer); return; }
 
-              // ព្រំដែនតំបន់ (Zone Border) នៅសល់ Prompt ព្រោះវាត្រូវតែមានឈ្មោះភ្លាមៗ
               const zoneName = prompt("សូមបញ្ចូលឈ្មោះតំបន់ (Zone) សម្រាប់ព្រំដែននេះ៖");
               if (!zoneName) { map.removeLayer(layer); return; }
               await supabaseClient.from('zone_borders').upsert({ zone: zoneName, geojson: geojson });
@@ -468,10 +466,12 @@ function renderMapMarkers() {
       
       if (!canEditRoad) return;
 
-      let roadColor = '#94a3b8'; 
+      let roadColor = '#c4c10e'; 
       if(road.road_type === 'Land road') roadColor = '#d97706';
       if(road.road_type === 'Hight Ways road') roadColor = '#3b82f6';
       if(road.road_type === 'Nation road') roadColor = '#16a34a';
+      if(road.road_type === 'Concrete road') roadColor = '#a3164e';
+      if(road.road_type === 'Asphalt road') roadColor = '#9716a3';
 
       const rLayer = L.geoJSON(road.geojson, {
           style: { color: roadColor, weight: 6, opacity: 0.9 }
@@ -779,7 +779,7 @@ window.printBill = (id) => {
     const month = document.getElementById('p-month').value, fee = document.getElementById('p-fee').value, rawStatus = document.getElementById('p-status').value;
     const imgElement = document.getElementById(`p-img-${id}`); let customerImgSrc = '';
     if (imgElement && !imgElement.classList.contains('hidden')) customerImgSrc = imgElement.src;
-    const logoSrc = new URL('logo/Map Ark.png', window.location.href).href;
+    const logoSrc = new URL('logo/Map Ark.png', window.location.href).href; 
     let statusText = rawStatus === 'blue' ? "បានបង់" : (rawStatus === 'red' ? "ទីតាំងបិទ" : (rawStatus === 'black' ? "បានបង់តែទុកសិន" : "មិនទាន់បានបង់"));
     const today = new Date(); const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
 
@@ -817,5 +817,5 @@ window.exportToCSV = () => {
     let csv = "\uFEFFលេខកូដ,ឈ្មោះ,តម្លៃត្រូវបង់,ខែត្រូវបង់,តំបន់\n"; 
     currentReportData.forEach(h => { csv += `"${h.custom_id}","${h.customer_name||''}","${h.monthly_fee||0}","${h.payment_month||''}","${h.zone||''}"\n`; });
     const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-    link.download = `Maps_Ark_Report.csv`; link.click();
+    link.download = `Maps Ark_Report.csv`; link.click();
 }
