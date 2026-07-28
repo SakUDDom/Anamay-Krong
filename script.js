@@ -203,7 +203,6 @@ function initLeafletMap() {
   L.control.zoom({ position: 'bottomright' }).addTo(map);
   L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', { maxZoom: 21, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
   
-  // 🚀 អាអូនបានដកពាក្យ .addTo(map) ចេញអស់ហើយ! វាមានន័យថាវាអត់បង្ហាញលើផែនទីអូតូទេ ទាល់តែអ្នកប្រើចុចបើកទើបវាចេញ!
   pointsGroup = L.featureGroup();
   roofsGroup = L.featureGroup();
   roadsGroup = L.featureGroup();
@@ -227,6 +226,11 @@ function initLeafletMap() {
           });
           if (error) alert("⚠️ មិនអាចបញ្ចូលទិន្នន័យបានទេ៖ " + error.message);
           
+          // 🚀 លុបម្ជុលខ្មោច (Ghost Layer) ចោល និង បើកកុងតាក់ Point អូតូ
+          map.removeLayer(layer); 
+          document.getElementById('toggle-points').checked = true;
+          map.addLayer(pointsGroup);
+          
           fetchAndRenderData();
           
       } else if (e.shape === 'Line' && window.currentDrawMode === 'road') {
@@ -246,6 +250,11 @@ function initLeafletMap() {
               });
               if (error) alert("⚠️ មិនអាចបញ្ចូលទិន្នន័យបានទេ៖ " + error.message);
               
+              // 🚀 លុបខ្មោច Polygon ចោល និង បើកកុងតាក់ Roof អូតូ
+              map.removeLayer(layer);
+              document.getElementById('toggle-roofs').checked = true;
+              map.addLayer(roofsGroup);
+              
               fetchAndRenderData();
               
           } else if (window.currentDrawMode === 'border') {
@@ -255,6 +264,11 @@ function initLeafletMap() {
               if (!zoneName) { map.removeLayer(layer); return; }
               const { error } = await supabaseClient.from('zone_borders').upsert({ zone: zoneName, geojson: geojson });
               if (error) alert("⚠️ កំហុស៖ " + error.message);
+              
+              // 🚀 លុបខ្មោច Border ចោល និង បើកកុងតាក់ Border អូតូ
+              map.removeLayer(layer);
+              document.getElementById('toggle-borders').checked = true;
+              map.addLayer(bordersGroup);
               
               fetchAndRenderData();
           } else {
@@ -308,7 +322,7 @@ window.showRoadFormModal = (layer, geojson, existingRoad = null) => {
     const addrVal = existingRoad ? (existingRoad.address || "") : "";
     const typeVal = existingRoad ? (existingRoad.road_type || "Land road") : "Land road";
 
-    const formHtml = `
+     const formHtml = `
     <div id="road-modal" class="absolute inset-0 z-[4000] bg-black/60 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 transform transition-all">
             <h3 class="font-bold text-indigo-800 text-lg mb-4 flex items-center"><i class="fa-solid fa-road mr-2 text-indigo-500"></i>${title}</h3>
@@ -355,6 +369,12 @@ window.saveRoadData = async () => {
     }
     
     document.getElementById('road-modal').remove();
+    
+    // 🚀 លុបខ្មោចផ្លូវចោល (Ghost Road) ហើយបើកកុងតាក់ Road អូតូ
+    if(window.tempRoadLayer) map.removeLayer(window.tempRoadLayer);
+    document.getElementById('toggle-roads').checked = true;
+    map.addLayer(roadsGroup);
+    
     fetchAndRenderData();
 };
 
@@ -458,7 +478,7 @@ function renderMapMarkers() {
       }
   }
 
-   roadsData.forEach(road => {
+ roadsData.forEach(road => {
       if(!road.geojson) return;
       
       if (!canEditRoad) return;
@@ -759,7 +779,7 @@ window.showHistory = async (householdId) => {
             });
         }
         content.innerHTML = html;
-    } catch (e) { content.innerHTML = '<div class="text-center text-rose-500 font-bold py-10">មានបញ្ហាក្នុងការទាញយកទិន្នន័យ!</div>'; }
+    } catch (e) { content.innerHTML = '<div class="text-center text-rose-500 font-bold py-10">មានបញ្ហាកদ্দាក្នុងការទាញយកទិន្នន័យ!</div>'; }
 }
 
 window.undoPayment = async (historyId, householdId, month) => {
@@ -782,7 +802,7 @@ window.printBill = (id) => {
     const month = document.getElementById('p-month').value, fee = document.getElementById('p-fee').value, rawStatus = document.getElementById('p-status').value;
     const imgElement = document.getElementById(`p-img-${id}`); let customerImgSrc = '';
     if (imgElement && !imgElement.classList.contains('hidden')) customerImgSrc = imgElement.src;
-    const logoSrc = new URL('logo/Map_Ark.png', window.location.href).href; 
+    const logoSrc = new URL('logo/Map Ark.png', window.location.href).href; 
     let statusText = rawStatus === 'blue' ? "បានបង់" : (rawStatus === 'red' ? "ទីតាំងបិទ" : (rawStatus === 'black' ? "បានបង់តែទុកសិន" : "មិនទាន់បានបង់"));
     const today = new Date(); const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
 
@@ -820,5 +840,5 @@ window.exportToCSV = () => {
     let csv = "\uFEFFលេខកូដ,ឈ្មោះ,តម្លៃត្រូវបង់,ខែត្រូវបង់,តំបន់\n"; 
     currentReportData.forEach(h => { csv += `"${h.custom_id}","${h.customer_name||''}","${h.monthly_fee||0}","${h.payment_month||''}","${h.zone||''}"\n`; });
     const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-    link.download = `Maps_Ark_Report.csv`; link.click();
+    link.download = `Maps Ark_Report.csv`; link.click();
 }
